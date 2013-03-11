@@ -1,32 +1,40 @@
-// Backbone.ModelBinder v0.1.5
+// Backbone.ModelBinder v0.1.6
 // (c) 2012 Bart Wood
 // Distributed Under MIT License
 
-// altered define function to meet app needs
-define([], function(){
-
+(function (factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['lodash', 'jquery', 'backbone'], factory);
+    } else {
+        // Browser globals
+        factory(_, $, Backbone);
+    }
+}(function(_, $, Backbone){
 
     if(!Backbone){
         throw 'Please include Backbone.js before Backbone.ModelBinder.js';
     }
 
-    Backbone.ModelBinder = function(){
+    Backbone.ModelBinder = function(modelSetOptions){
         _.bindAll(this);
+    this._modelSetOptions = modelSetOptions || {};
     };
-
+ 
     // Current version of the library.
-    Backbone.ModelBinder.VERSION = '0.1.5';
+    Backbone.ModelBinder.VERSION = '0.1.6';
     Backbone.ModelBinder.Constants = {};
     Backbone.ModelBinder.Constants.ModelToView = 'ModelToView';
     Backbone.ModelBinder.Constants.ViewToModel = 'ViewToModel';
-/* michael forbes - extend with Backbone.events so we can send events in here */
-    _.extend(Backbone.ModelBinder.prototype, Backbone.Events, {
 
-        bind:function (model, rootEl, attributeBindings) {
+    _.extend(Backbone.ModelBinder.prototype, {
+
+        bind:function (model, rootEl, attributeBindings, modelSetOptions) {
             this.unbind();
 
             this._model = model;
             this._rootEl = rootEl;
+            this._modelSetOptions = _.extend({}, this._modelSetOptions, modelSetOptions);
 
             if (!this._model) throw 'model must be specified';
             if (!this._rootEl) throw 'rootEl must be specified';
@@ -44,6 +52,11 @@ define([], function(){
 
             this._bindModelToView();
             this._bindViewToModel();
+        },
+
+        bindCustomTriggers: function (model, rootEl, triggers, attributeBindings, modelSetOptions) {
+           this._triggers = triggers;
+           this.bind(model, rootEl, attributeBindings, modelSetOptions)
         },
 
         unbind:function () {
@@ -89,7 +102,7 @@ define([], function(){
 
         // If the bindings are not specified, the default binding is performed on the name attribute
         _initializeDefaultBindings: function(){
-            var elCount, namedEls, namedEl, name;
+            var elCount, namedEls, namedEl, name, attributeBinding;
             this._attributeBindings = {};
             namedEls = $('[name]', this._rootEl);
 
@@ -99,7 +112,7 @@ define([], function(){
 
                 // For elements like radio buttons we only want a single attribute binding with possibly multiple element bindings
                 if(!this._attributeBindings[name]){
-                    var attributeBinding =  {attributeName: name};
+                    attributeBinding =  {attributeName: name};
                     attributeBinding.elementBindings = [{attributeBinding: attributeBinding, boundEls: [namedEl]}];
                     this._attributeBindings[name] = attributeBinding;
                 }
@@ -164,16 +177,30 @@ define([], function(){
             }
         },
 
-        _bindViewToModel:function () {
-            $(this._rootEl).delegate('', 'change', this._onElChanged);
-            // The change event doesn't work properly for contenteditable elements - but blur does
-            $(this._rootEl).delegate('[contenteditable]', 'blur', this._onElChanged);
+        _bindViewToModel: function () {
+            if (this._triggers) {
+                _.each(this._triggers, function (event, selector) {
+                    $(this._rootEl).delegate(selector, event, this._onElChanged);
+                }, this);
+            }
+            else {
+                $(this._rootEl).delegate('', 'change', this._onElChanged);
+                // The change event doesn't work properly for contenteditable elements - but blur does
+                $(this._rootEl).delegate('[contenteditable]', 'blur', this._onElChanged);
+            }
         },
 
-        _unbindViewToModel: function(){
-            if(this._rootEl){
-                $(this._rootEl).undelegate('', 'change', this._onElChanged);
-                $(this._rootEl).undelegate('[contenteditable]', 'blur', this._onElChanged);
+        _unbindViewToModel: function () {
+            if (this._rootEl) {
+                if (this._triggers) {
+                    _.each(this._triggers, function (event, selector) {
+                        $(this._rootEl).undelegate(selector, event, this._onElChanged);
+                    }, this);
+                }
+                else {
+                    $(this._rootEl).undelegate('', 'change', this._onElChanged);
+                    $(this._rootEl).undelegate('[contenteditable]', 'blur', this._onElChanged);
+                }
             }
         },
 
@@ -233,20 +260,21 @@ define([], function(){
         },
 
         _copyModelToView:function (attributeBinding) {
-            var elementBindingCount, elementBinding, boundElCount, boundEl;
-            var value = this._model.get(attributeBinding.attributeName);
+            var elementBindingCount, elementBinding, boundElCount, boundEl, value, convertedValue;
+
+            value = this._model.get(attributeBinding.attributeName);
 
             for (elementBindingCount = 0; elementBindingCount < attributeBinding.elementBindings.length; elementBindingCount++) {
                 elementBinding = attributeBinding.elementBindings[elementBindingCount];
-//michael forbes - removed isSetting flag.. what is it for??? 
-               // if(!elementBinding.isSetting){
-                    var convertedValue = this._getConvertedValue(Backbone.ModelBinder.Constants.ModelToView, elementBinding, value);
 
-                    for (boundElCount = 0; boundElCount < elementBinding.boundEls.length; boundElCount++) {
-                        boundEl = elementBinding.boundEls[boundElCount];
+                for (boundElCount = 0; boundElCount < elementBinding.boundEls.length; boundElCount++) {
+                    boundEl = elementBinding.boundEls[boundElCount];
+
+                    if(!boundEl._isSetting){
+                        convertedValue = this._getConvertedValue(Backbone.ModelBinder.Constants.ModelToView, elementBinding, value);
                         this._setEl($(boundEl), elementBinding, convertedValue);
                     }
-              //  }
+                }
             }
         },
 
@@ -260,7 +288,6 @@ define([], function(){
         },
 
         _setElAttribute:function (el, elementBinding, convertedValue) {
-
             switch (elementBinding.elAttribute) {
                 case 'html':
                     el.html(convertedValue);
@@ -297,8 +324,7 @@ define([], function(){
         },
 
         _setElValue:function (el, convertedValue) {
-
-            if(el.attr('type') && el[0].nodeName!=='BUTTON'){
+            if(el.attr('type')){
                 switch (el.attr('type')) {
                     case 'radio':
                         if (el.val() === convertedValue) {
@@ -321,33 +347,24 @@ define([], function(){
                 el.val(convertedValue);
             }
             else {
-                /* michael forbes - changed to html instead of text, added conversion of html tags to entities for display */
-                if(typeof convertedValue === 'string'){
-                    convertedValue = convertedValue.replace(/&/g,"&amp;");
-                    convertedValue = convertedValue.replace(/</g,"&lt;");
-                    convertedValue = convertedValue.replace(/>/g,"&gt;");
-                    el.html(convertedValue);
-                }
-                /* michael forbes - add support to pass in an object (jquery document fragments mainly) */
-                else{
-                    el.empty().append(convertedValue);
-                }
-               
-                /* michael forbes - add event so we can get the value and localize it if needed */
-                this.trigger('binderValueChanged',{el:el,value:convertedValue});
+                el.text(convertedValue);
             }
         },
 
         _copyViewToModel: function (elementBinding, el) {
-            if (!elementBinding.isSetting) {
-                elementBinding.isSetting = true;
+            var value, convertedValue;
+
+            if (!el._isSetting) {
+
+                el._isSetting = true;
                 this._setModel(elementBinding, $(el));
+                el._isSetting = false;
 
                 if(elementBinding.converter){
-                    this._copyModelToView(elementBinding.attributeBinding);
+                    value = this._model.get(elementBinding.attributeBinding.attributeName);
+                    convertedValue = this._getConvertedValue(Backbone.ModelBinder.Constants.ModelToView, elementBinding, value);
+                    this._setEl($(el), elementBinding, convertedValue);
                 }
-
-                elementBinding.isSetting = false;
             }
         },
 
@@ -370,7 +387,8 @@ define([], function(){
             var elVal = this._getElValue(elementBinding, el);
             elVal = this._getConvertedValue(Backbone.ModelBinder.Constants.ViewToModel, elementBinding, elVal);
             data[elementBinding.attributeBinding.attributeName] = elVal;
-            this._model.set(data, {changeSource: 'ModelBinder'});
+            var opts = _.extend({}, this._modelSetOptions, {changeSource: 'ModelBinder'});
+            this._model.set(data, opts);
         },
 
         _getConvertedValue: function (direction, elementBinding, value) {
@@ -454,291 +472,11 @@ define([], function(){
                 destination[key] = [destination[key], elementBinding];
             }
         });
+
+        return destination;
     };
 
-    // Backbone.CollectionBinder v0.1.1
-// (c) 2012 Bart Wood
-// Distributed Under MIT License
 
-(function(){
+    return Backbone.ModelBinder;
 
-    if(!Backbone){
-        throw 'Please include Backbone.js before Backbone.ModelBinder.js';
-    }
-
-    if(!Backbone.ModelBinder){
-        throw 'Please include Backbone.ModelBinder.js before Backbone.CollectionBinder.js';
-    }
-
-    Backbone.CollectionBinder = function(elManagerFactory){
-        _.bindAll(this);
-
-        this._elManagerFactory = elManagerFactory;
-        if(!this._elManagerFactory) throw 'elManagerFactory must be defined.';
-
-        // Let the factory just use the trigger function on the view binder
-        this._elManagerFactory.trigger = this.trigger;
-    };
-
-    Backbone.CollectionBinder.VERSION = '0.1.1';
-
-    _.extend(Backbone.CollectionBinder.prototype, Backbone.Events, {
-        bind: function(collection, parentEl){
-            
-            this.unbind();
-            this.isNewlyBound = true;
-
-            if(!collection) throw 'collection must be defined';
-            if(!parentEl) throw 'parentEl must be defined';
-            this.parentEl = parentEl;
-            this._collection = collection;
-            this._elManagerFactory.setParentEl(parentEl);
-
-            /* michael forbes - added complete event */
-            this._collection.on('complete', this._onCollectionComplete, this);
-            this._collection.on('add', this._onCollectionAdd, this);
-            this._collection.on('remove', this._onCollectionRemove, this);
-            this._collection.on('reset', this._onCollectionReset, this);
-
-        },
-
-        unbind: function(){
-            if(this._collection !== undefined){
-                this._collection.off('complete', this._onCollectionComplete);
-                this._collection.off('add', this._onCollectionAdd);
-                this._collection.off('remove', this._onCollectionRemove);
-                this._collection.off('reset', this._onCollectionReset);
-            }
-
-            this._removeAllElManagers();
-        },
-
-        getManagerForEl: function(el){
-            var i, elManager, elManagers = _.values(this._elManagers);
-
-            for(i = 0; i < elManagers.length; i++){
-                elManager = elManagers[i];
-
-                if(elManager.isElContained(el)){
-                    return elManager;
-                }
-            }
-
-            return undefined;
-        },
-
-        getManagerForModel: function(model){
-            var i, elManager, elManagers = _.values(this._elManagers);
-
-            for(i = 0; i < elManagers.length; i++){
-                elManager = elManagers[i];
-
-                if(elManager.getModel() === model){
-                    return elManager;
-                }
-            }
-
-            return undefined;
-        },
-        /* michael forbes - added complete event - its not particularly efficient, but it fixes some jnap syncing issues */
-        _onCollectionComplete: function(model){
-
-                var self = this;
-                /* this needs to go to the end of the execution stack, otherwise it can interfere with _onCollectionAdd and
-                we get duplicate entries */
-                setTimeout(function(){
-                    self.parentEl.empty();
-                    self._removeAllElManagers();
-                    self._collection.each(function(model){
-                    self._onCollectionAdd(model,true);
-                });
-
-                    self.trigger('complete');
-                },0);
-                
-        },
-
-        _onCollectionAdd: function(model,fromLoop){
-            if(this.isNewlyBound){
-                this.parentEl.empty();
-                this.isNewlyBound=false;
-            }
-            /* michael forbes - added check to see if this model was already bound to prevent duplicates */
-            if(!this._elManagers[model.cid]){
-                this._elManagers[model.cid] = this._elManagerFactory.makeElManager(model);
-                this._elManagers[model.cid].createEl();
-                
-            }
-        },
-
-        _onCollectionRemove: function(model){
-            this._removeElManager(model);
-             this.trigger('remove');
-        },
-
-        _onCollectionReset: function(){
-            this._removeAllElManagers();
-
-            this._collection.each(function(model){
-                this._onCollectionAdd(model);
-            }, this);
-
-            this.trigger('complete');
-            this.trigger('elsReset', this._collection);
-        },
-
-        _removeAllElManagers: function(){
-            _.each(this._elManagers, function(elManager){
-                elManager.removeEl();
-                delete this._elManagers[elManager._model.cid];
-            }, this);
-
-            delete this._elManagers;
-            this._elManagers = {};
-        },
-
-        _removeElManager: function(model){
-            if(this._elManagers[model.cid] !== undefined){
-                this._elManagers[model.cid].removeEl();
-                delete this._elManagers[model.cid];
-            }
-        }
-    });
-
-    // The ElManagerFactory is used for els that are just html templates
-    // elHtml - how the model's html will be rendered.  Must have a single root element (div,span).
-    // bindings (optional) - either a string which is the binding attribute (name, id, data-name, etc.) or a normal bindings hash
-    Backbone.CollectionBinder.ElManagerFactory = function(elHtml, bindings){
-        _.bindAll(this);
-
-        this._elHtml = elHtml;
-        this._bindings = bindings;
-
-        if(! _.isString(this._elHtml)) throw 'elHtml must be a valid html string';
-    };
-
-    _.extend(Backbone.CollectionBinder.ElManagerFactory.prototype, {
-        setParentEl: function(parentEl){
-            this._parentEl = parentEl;
-        },
-
-        makeElManager: function(model){
-
-            var elManager = {
-                _model: model,
-
-                createEl: function(){
-
-                    this._el =  $(this._elHtml);
-                    $(this._parentEl).append(this._el);
-
-                    if(this._bindings){
-                        if(_.isString(this._bindings)){
-                            this._modelBinder = new Backbone.ModelBinder();
-                            this._modelBinder.bind(this._model, this._el, Backbone.ModelBinder.createDefaultBindings(this._el, this._bindings));
-                        }
-                        else if(_.isObject(this._bindings)){
-                            this._modelBinder = new Backbone.ModelBinder();
-                            this._modelBinder.bind(this._model, this._el, this._bindings);
-                        }
-                        else {
-                            throw 'Unsupported bindings type, please use a boolean or a bindings hash';
-                        }
-                    }
-
-                    this.trigger('elCreated', this._model, this._el);
-                },
-
-                removeEl: function(){
-                    if(this._modelBinder !== undefined){
-                        this._modelBinder.unbind();
-                    }
-
-                    this._el.remove();
-                    this.trigger('elRemoved', this._model, this._el);
-                },
-
-                isElContained: function(findEl){
-                    return this._el === findEl || $(this._el).has(findEl).length > 0;
-                },
-
-                getModel: function(){
-                    return this._model;
-                },
-
-                getEl: function(){
-                    return this._el;
-                }
-            };
-
-            _.extend(elManager, this);
-            return elManager;
-        }
-    });
-
-
-    // The ViewManagerFactory is used for els that are created and owned by backbone views.
-    // There is no bindings option because the view made by the viewCreator should take care of any binding
-    // viewCreator - a callback that will create backbone view instances for a model passed to the callback
-    Backbone.CollectionBinder.ViewManagerFactory = function(viewCreator){
-        _.bindAll(this);
-        this._viewCreator = viewCreator;
-
-        if(!_.isFunction(this._viewCreator)) throw 'viewCreator must be a valid function that accepts a model and returns a backbone view';
-    };
-
-    _.extend(Backbone.CollectionBinder.ViewManagerFactory.prototype, {
-        setParentEl: function(parentEl){
-            this._parentEl = parentEl;
-        },
-
-        makeElManager: function(model){
-            var elManager = {
-
-                _model: model,
-
-                createEl: function(){
-                    this._view = this._viewCreator(model);
-                    $(this._parentEl).append(this._view.render(this._model).el);
-
-                    this.trigger('elCreated', this._model, this._view);
-                },
-
-                removeEl: function(){
-                    if(this._view.close !== undefined){
-                        this._view.close();
-                    }
-                    else {
-                        this._view.$el.remove();
-                        // console.log('Backbone.ModelBinder', 'warning, you should implement a close() function for your view, you might end up with zombies');
-                    }
-
-                    this.trigger('elRemoved', this._model, this._view);
-                },
-
-                isElContained: function(findEl){
-                    return this._view.el === findEl || this._view.$el.has(findEl).length > 0;
-                },
-
-                getModel: function(){
-                    return this._model;
-                },
-
-                getEl: function(){
-                    return this._view.el;
-                }
-            };
-
-            _.extend(elManager, this);
-
-            return elManager;
-        }
-    });
-
-}).call(this);
-
-return Backbone;
-
-});
-
-
+}));

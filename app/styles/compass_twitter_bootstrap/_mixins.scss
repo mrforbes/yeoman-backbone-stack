@@ -248,6 +248,12 @@
           box-shadow: $shadow;
 }
 
+@mixin box-shadow-double($shadow,$shadow2) {
+  -webkit-box-shadow: $shadow,$shadow2;
+     -moz-box-shadow: $shadow,$shadow2;
+          box-shadow: $shadow,$shadow2;
+}
+
 // Transitions
 @mixin transition($transition) {
   -webkit-transition: $transition;
@@ -653,4 +659,11 @@
     }
     $i: $i - 1;
   }
+}
+
+@mixin box-Style(){
+	@include border-radius(0.313em);
+	border: 1px solid #97a6af;
+	background: #f1f5f8;
+	padding: 4%;
 }

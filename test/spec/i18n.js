@@ -6,12 +6,15 @@ define([
 function(chai,template,colorsJSON){
   'use strict';
 
+  mocha.setup({ignoreLeaks: true});
+
    var assert = chai.assert,
     expect = chai.expect,
     should = chai.should();
 
    describe('async',function(){
      var lang = 'en_us';
+
      beforeEach(function(){
         lang = 'fr-fr'
      });

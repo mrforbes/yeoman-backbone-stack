@@ -1,83 +1,39 @@
 define([
-  // Libraries.
-  "jquery",
-  "lodash",
-  "backbone",
+    // Libraries.
+    'jquery',
+    'lodash',
+    'DeepModel',
 
-  // Plugins.
-  "plugins/backbone.layoutmanager"
+    // Plugins.
+    'plugins/jquery.cookie',
+
+    'plugins/Backbone.ModelBinder',
+    'plugins/backbone.validation',
+    'plugins/base64',
+    'plugins/jquery.inputmask',
+    'plugins/jquery.io',
+    //Bootstrap.
+    'plugins/bootstrap-modal',
+
+    // dust templates
+    'templates'
 ],
 
 function($, _, Backbone) {
 
-  // Provide a global location to place configuration settings and module
-  // creation.
-  var app = {
-    // The root path to run the application.
-    root: "/"
-  };
+    'use strict';
 
-  // Localize or create a new JavaScript Template object.
-  var JST = window.JST = window.JST || {};
+    //Add Backbone.Model validation:
+    _.extend(Backbone.DeepModel.prototype, Backbone.Validation.mixin);
 
-  // Configure LayoutManager with Backbone Boilerplate defaults.
-  Backbone.LayoutManager.configure({
-    paths: {
-      layout: "app/templates/layouts/",
-      template: "app/templates/"
-    },
-
-    fetch: function(path) {
-      path = path + ".html";
-
-      if (!JST[path]) {
-        $.ajax({ url: app.root + path, async: false }).then(function(contents) {
-          JST[path] = _.template(contents);
-        });
-      }
-
-      return JST[path];
-    }
-  });
+    // Provide a global location to place configuration settings and module
+    // creation.
+    var app = {
+        // The root path to run the application.
+        root: '/',
+        oldView: null
+    };
 
   // Mix Backbone.Events, modules, and layout management into the app object.
-  return _.extend(app, {
-    // Create a custom object with a nested Views object.
-    module: function(additionalProps) {
-      return _.extend({ Views: {} }, additionalProps);
-    },
-
-    // Helper for using layouts.
-    useLayout: function(name) {
-      // If already using this Layout, then don't re-inject into the DOM.
-      if (this.layout && this.layout.options.template === name) {
-        return this.layout;
-      }
-
-      // If a layout already exists, remove it from the DOM.
-      if (this.layout) {
-        this.layout.remove();
-      }
-
-      // Create a new Layout.
-      var layout = new Backbone.Layout({
-        template: name,
-        className: "layout " + name,
-        id: "layout"
-      });
-
-      // Insert into the DOM.
-      $("#main").empty().append(layout.el);
-
-      // Render the layout.
-      layout.render();
-
-      // Cache the refererence.
-      this.layout = layout;
-
-      // Return the reference, for chainability.
-      return layout;
-    }
-  }, Backbone.Events);
-
+    return _.extend(app, Backbone.Events);
 });

@@ -1,44 +1,27 @@
 define([
-  // Application.
-  "app", "index", "error","selection","create","enterId","feed"
+    // Application.
+    'app', 'views/index'
 ],
 
-function(app, index, error, selection, create, enterId, feed) {
+function(app, index) {
 
-  // Defining the application router, you can attach sub routers here.
-  var Router = Backbone.Router.extend({
-    routes: {
-      "": "index",
-      "error": "error",
-      "selection":"selection",
-      "create":"create",
-      "enterId":"enterId",
-      "feed":"feed"
-    },
-    initialize: function(){
+    'use strict';
 
-    },
-    index: function() {
-        index.initialize();
-    },
-    error: function(){
-        error.initialize();
-    },
-    selection: function(){
-        selection.initialize();
-    },
-    create: function(){
-        create.initialize();
-    },
-    enterId: function(){
-        enterId.initialize();
-    },
-    feed: function(){
-        feed.initialize();
-    }
+    // Defining the application router, you can attach sub routers here.
+    var Router = Backbone.Router.extend({
+        routes: {
+            '': 'index'
+        },
+        initialize: function() {
 
-  });
+        },
+        index: function() {
+            index.initialize();
+        }
 
-  return Router;
+    });
+
+
+    return Router;
 
 });

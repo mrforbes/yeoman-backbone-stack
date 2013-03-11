@@ -6,9 +6,15 @@
  *
  *
  */
-
- /** michael forbes - cisco - remove AMD support, we are not using it for _ and Backbone **/
-(function(_, Backbone) {
+;(function(factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD
+        define(['lodash', 'backbone'], factory);
+    } else {
+        // globals
+        factory(_, Backbone);
+    }
+}(function(_, Backbone) {
     
     /**
      * Takes a nested object and returns a shallow object keyed with the path names
@@ -164,6 +170,9 @@
         // Override set
         // Supports nested attributes via the syntax 'obj.attr' e.g. 'author.user.name'
         set: function(key, val, options) {
+
+            options = options || {};
+            
             var attr, attrs;
             if (key == null) return this;
             
@@ -178,8 +187,12 @@
             // Extract attributes and options.
             var silent = options && options.silent;
             var unset = options && options.unset;
-            
+        
             // Run validation.
+            /* michael forbes - don't know where options was going.. weird parse error or something */
+            if(!options) options = {silent:true};
+            
+
             if (!this._validate(attrs, options)) return false;
 
             // Check for changes of `id`.
@@ -315,7 +328,7 @@
           return changed;
         }
     });
-
+ 
 
     //Config; override in your app to customise
     DeepModel.keyPathSeparator = '.';
@@ -323,9 +336,10 @@
 
     //Exports
     Backbone.DeepModel = DeepModel;
+
     //For use in NodeJS
     if (typeof module != 'undefined') module.exports = DeepModel;
     
     return Backbone;
 
-}(_,Backbone));
+}));

@@ -1,0 +1,3 @@
+(function(){dust.register("color",body_0);function body_0(chk,ctx){return chk.write("The color is ").reference(ctx.get("red"),ctx,"h");}return body_0;})();
+(function(){dust.register("index",body_0);function body_0(chk,ctx){return chk.write("<div>The color is ").reference(ctx.get("red"),ctx,"h").write(";</div>");}return body_0;})();
+(function(){dust.register("main",body_0);function body_0(chk,ctx){return chk.write("<!-- put the outer template here, everything will load into viewmaster --><div id=\"viewmaster\"></div><!-- put the outer template here, everything will load into viewmaster -->");}return body_0;})();

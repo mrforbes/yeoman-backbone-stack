@@ -1,5 +1,7 @@
-@import "compass_twitter_bootstrap";
+/*Required Compass components*/
+@import "compass_twitter_bootstrap/variables";
+@import "compass_twitter_bootstrap/mixins";
+@import "compass_twitter_bootstrap/reset";
+@import "compass_twitter_bootstrap/modals";
 
-.hero-unit h1{
-	color:red;
-}
+/*Common Css rules*/ 

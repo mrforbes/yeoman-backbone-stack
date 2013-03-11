@@ -12,16 +12,21 @@ files = [
   MOCHA_ADAPTER,
   REQUIRE,
   REQUIRE_ADAPTER,
+  'app/scripts/plugins/dust.core.1.2.0.js', 
+  'app/scripts/templates.js',
   'app/scripts/config.js',
   {pattern: 'test/lib/chai.js', included: false},
-  {pattern: 'test/test.js', included: false},
+  {pattern: 'test/lib/sinon.js', included: false},
   {pattern: 'app/nls/*', included: false},
   {pattern: 'app/nls/**/*', included: false},
   {pattern: 'app/templates/*', included: false},
   {pattern: 'app/scripts/*.js', included: false},
+  {pattern: 'app/scripts/views/*.js', included: false},
   {pattern: 'app/scripts/libs/*.js', included: false},
   {pattern: 'app/scripts/plugins/*.js', included: false},
   {pattern: 'test/spec/*.js', included: false},
+  {pattern: 'test/spec/**/*.js', included: false},
+  {pattern: 'test/lib/mockjax/*.js', included: false},
   'test/test-main.js'
 ];
 
@@ -55,7 +60,7 @@ logLevel = LOG_INFO;
 
 
 // enable / disable watching file and executing tests whenever any file changes
-autoWatch = true;
+autoWatch = false;
 
 
 // Start these browsers, currently available:

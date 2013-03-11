@@ -45,6 +45,7 @@ html {
   -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
 }
+body, p, ul, h1, h2, h3, h4, h5, h6 {margin:0;}
 // Focus states
 a:focus {
   @include tab-focus();

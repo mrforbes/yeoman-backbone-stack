@@ -1,0 +1,66 @@
+{
+      
+      "browser": true,
+
+     
+      "jquery": true,
+
+     
+      "node": true,
+
+      
+      "camelcase": true,
+
+     
+      "eqeqeq": true,
+
+     
+      "eqnull": true,
+
+      
+      "latedef": true,
+
+     
+      "newcap": true,
+
+      
+      "quotmark": "single",
+
+      
+      "trailing": true,
+
+     
+      "undef": true,
+      "indent":4,
+   
+ 
+      "unused": true,
+      "white":false,
+"sub":true,
+        "predef":
+        [
+            "Backbone",
+            "describe",
+            "it",
+            "define",
+            "require",
+            "dust",
+            "LOVEFiLM",
+            "$",
+            "jQuery",
+            "console",
+            "Class",
+            "Modernizr",
+            "History",
+            "Scroller",
+            "dust",
+            "define",
+            "describe",
+            "it",
+            "beforeEach",
+            "afterEach",
+            "alert",
+	    "_",
+	   "sinon"
+        ]
+    }
